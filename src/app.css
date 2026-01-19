@@ -1,0 +1,19 @@
+@import "tailwindcss" prefix(ext) source(none);
+
+/* Explicitly set content sources */
+@source "../src/**/*.{tsx,ts,jsx,js}";
+
+#ext-app {
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  overflow: hidden;
+  border-radius: 10px;
+  max-width: 700px;
+  background-color: #1f1f1f;
+}
+
+/* Disable Preflight (base reset styles) to avoid affecting host page */
+@layer base {
+  /* Empty - no base styles */
+}
