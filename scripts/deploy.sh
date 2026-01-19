@@ -22,30 +22,35 @@ fi
 
 echo -e "${YELLOW}Deploying to $DIST_BRANCH branch...${NC}"
 
-# Save current branch name
-CURRENT_BRANCH=$(git branch --show-current)
+# Get the remote URL
+REMOTE_URL=$(git remote get-url origin)
 
-# Create a temporary directory for the dist files
+# Store the absolute path to dist
+ORIGINAL_DIR=$(pwd)
+DIST_ABSOLUTE="$ORIGINAL_DIR/$DIST_DIR"
+
+# Create a temporary directory for git operations
 TEMP_DIR=$(mktemp -d)
-cp -r "$DIST_DIR"/* "$TEMP_DIR/"
+trap "rm -rf $TEMP_DIR" EXIT
 
-# Check if dist branch exists
-if git show-ref --verify --quiet "refs/heads/$DIST_BRANCH"; then
-    git checkout "$DIST_BRANCH"
+cd "$TEMP_DIR"
+git init -q
+
+# Check if dist branch exists on remote
+if git ls-remote --heads "$REMOTE_URL" "$DIST_BRANCH" | grep -q "$DIST_BRANCH"; then
+    # Fetch and checkout the existing branch
+    git fetch -q "$REMOTE_URL" "$DIST_BRANCH"
+    git checkout -q -b "$DIST_BRANCH" FETCH_HEAD
+    
+    # Remove old files (except .git)
+    find . -maxdepth 1 ! -name '.git' ! -name '.' -exec rm -rf {} +
 else
-    # Create orphan branch if it doesn't exist
-    git checkout --orphan "$DIST_BRANCH"
-    git rm -rf . 2>/dev/null || true
+    # Create new orphan branch
+    git checkout -q --orphan "$DIST_BRANCH"
 fi
 
-# Remove all files except .git
-find . -maxdepth 1 ! -name '.git' ! -name '.' -exec rm -rf {} +
-
-# Copy dist files to root
-cp -r "$TEMP_DIR"/* .
-
-# Clean up temp directory
-rm -rf "$TEMP_DIR"
+# Now copy dist files
+cp -r "$DIST_ABSOLUTE"/* .
 
 # Add and commit
 git add -A
@@ -53,15 +58,12 @@ if git diff --cached --quiet; then
     echo -e "${YELLOW}No changes to deploy${NC}"
 else
     COMMIT_MSG="Deploy: $(date '+%Y-%m-%d %H:%M:%S')"
-    git commit -m "$COMMIT_MSG"
+    git commit -q -m "$COMMIT_MSG"
     echo -e "${GREEN}Committed: $COMMIT_MSG${NC}"
+    
+    # Push to remote
+    git push -f "$REMOTE_URL" "$DIST_BRANCH"
+    echo -e "${GREEN}Pushed to origin/$DIST_BRANCH${NC}"
 fi
-
-# Push to remote
-git push -u origin "$DIST_BRANCH"
-echo -e "${GREEN}Pushed to origin/$DIST_BRANCH${NC}"
-
-# Switch back to original branch
-git checkout "$CURRENT_BRANCH"
 
 echo -e "${GREEN}Deploy complete!${NC}"
