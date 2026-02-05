@@ -42,10 +42,13 @@ echo -e "${YELLOW}Creating release $TAG...${NC}"
 echo -e "${YELLOW}Step 1: Deploy to $DIST_BRANCH branch${NC}"
 npm run deploy
 
+# Fetch so local origin/dist points to the commit we just pushed (deploy uses a temp clone)
+git fetch origin "$DIST_BRANCH"
+
 # Now create tag on the dist branch
 echo -e "${YELLOW}Step 2: Creating tag $TAG on $DIST_BRANCH branch${NC}"
 
-# Get the latest commit on dist branch
+# Get the latest commit on dist branch (now correct after fetch)
 DIST_COMMIT=$(git rev-parse "origin/$DIST_BRANCH")
 
 # Create annotated tag pointing to the dist branch commit
@@ -59,5 +62,5 @@ echo -e "${GREEN}Release $TAG complete!${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 echo -e "jsDelivr URL:"
-echo -e "${YELLOW}https://cdn.jsdelivr.net/gh/elbojoloco/myextension@$TAG/ext.js${NC}"
+echo -e "${YELLOW}https://cdn.jsdelivr.net/gh/elbojoloco/ext-test@$TAG/ext.js${NC}"
 echo ""
